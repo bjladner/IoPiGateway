@@ -1,0 +1,276 @@
+// **********************************************************************************
+// Websocket backend for the Raspberry Pi IoT Framework
+// **********************************************************************************
+// Modified from the Moteino IoT Framework - http://lowpowerlab.com/gateway
+// By Felix Rusu, Low Power Lab LLC (2015), http://lowpowerlab.com/contact
+// **********************************************************************************
+// Based on Node.js, socket.io, NeDB
+// This is a work in progress and is released without any warranties expressed or implied.
+// Please read the details below.
+// Also ensure you change the settings in this file to match your hardware and email settings etc.
+// **********************************************************************************
+// NeDB is Node Embedded Database - a persistent database for Node.js, with no dependency
+// Specs and documentation at: https://github.com/louischatriot/nedb
+//
+// Under the hood, NeDB's persistence uses an append-only format, meaning that all updates 
+// and deletes actually result in lines added at the end of the datafile. The reason for
+// this is that disk space is very cheap and appends are much faster than rewrites since
+// they don't do a seek. The database is automatically compacted (i.e. put back in the
+// one-line-per-document format) everytime your application restarts.
+// 
+// This script is configured to compact the database every 24 hours since time of start.
+// ********************************************************************************************
+// Copyright Brian Ladner
+// ********************************************************************************************
+//                                    LICENSE
+// ********************************************************************************************
+// This source code is released under GPL 3.0 with the following ammendments:
+// You are free to use, copy, distribute and transmit this Software for non-commercial purposes.
+// - You cannot sell this Software for profit while it was released freely to you by Low Power Lab LLC.
+// - You may freely use this Software commercially only if you also release it freely,
+//   without selling this Software portion of your system for profit to the end user or entity.
+//   If this Software runs on a hardware system that you sell for profit, you must not charge
+//   any fees for this Software, either upfront or for retainer/support purposes
+// - If you want to resell this Software or a derivative you must get permission from Low Power Lab LLC.
+// - You must maintain the attribution and copyright notices in any forks, redistributions and
+//   include the provided links back to the original location where this work is published,
+//   even if your fork or redistribution was initially an N-th tier fork of this original release.
+// - You must release any derivative work under the same terms and license included here.
+// - This Software is released without any warranty expressed or implied, and Low Power Lab LLC
+//   will accept no liability for your use of the Software (except to the extent such liability
+//   cannot be excluded as required by law).
+// - Low Power Lab LLC reserves the right to adjust or replace this license with one
+//   that is more appropriate at any time without any prior consent.
+// Otherwise all other non-conflicting and overlapping terms of the GPL terms below will apply.
+// ********************************************************************************************
+// This program is free software; you can redistribute it and/or modify it under the terms 
+// of the GNU General Public License as published by the Free Software Foundation;
+// either version 3 of the License, or (at your option) any later version.                    
+//                                                        
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+// without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// See the GNU General Public License for more details.
+//                                                        
+// You should have received a copy of the GNU General Public License along with this program.
+// If not license can be viewed at: http://www.gnu.org/licenses/gpl-3.0.txt
+//
+// Please maintain this license information along with authorship
+// and copyright notices in any redistribution of this code
+// **********************************************************************************
+
+var io = require('socket.io').listen(8080);
+var Datastore = require('nedb');
+var globalFunctions = require('./globals');
+var alerts = require('./alerts');
+var clients = require('./clients');
+var logger = require("./logger");
+var cfg = require('./config.default');
+
+var alertsDef = new alerts();
+var clientsDef = new clients();
+
+// db to keep all devices and changes
+var db = new Datastore({ filename: __dirname + '/databases/DBclients.db', autoload: true });
+db.persistence.setAutocompactionInterval(86400000); //daily
+
+// authorize handshake - make sure the request is coming from nginx, 
+// not from the outside world. If you comment out this section, you 
+// will be able to hit this socket directly at the port it's running
+// at, from anywhere! This was tested on Socket.IO v1.2.1 and will 
+// not work on older versions
+io.use(function(socket, next) {
+    var handshakeData = socket.request;
+    var remoteAddress = handshakeData.connection.remoteAddress;
+    var remotePort = handshakeData.connection.remotePort;
+    logger.info("AUTHORIZING CONNECTION FROM " + remoteAddress + ":" + remotePort);
+    if (remoteAddress == "localhost" || remoteAddress == "127.0.0.1") {
+        logger.info('IDENTITY ACCEPTED: from local host');
+        next();
+    } else {
+        var remote_add = remoteAddress.split(".",3);
+        var compare_str = cfg.locnet.start.split(".",3);
+        if (remote_add[0] == compare_str[0] && remote_add[1] == compare_str[1] && remote_add[2] == compare_str[2]) {
+            logger.info('IDENTITY ACCEPTED: from local network');
+            next();
+        } else {
+            logger.info('REJECTED IDENTITY, not coming from local network');
+            next(new Error('REJECTED IDENTITY, not coming from local network'));
+        }
+    }
+});
+
+io.sockets.on('connection', function (socket) {
+    logger.info("Socket connected!");
+    socket.emit('ALERTSDEF', alertsDef.availableAlerts);
+    socket.emit('CLIENTSDEF', clientsDef);
+
+    db.find({ _id : { $exists: true } }, function (err, entries) {
+        io.sockets.emit('UPDATENODES', entries);
+    });
+  
+    socket.on('INIT_DEVICE', function (deviceData) {
+        var id = deviceData.deviceID;
+        logger.info("Initializing Device: " + JSON.stringify(deviceData));
+        db.find({ _id : id }, function (err, entries) {
+            var existingNode = new Object();
+            if (entries.length == 1)
+                existingNode = entries[0];
+            existingNode._id = id;
+            existingNode.rssi = deviceData.signalStrength; //update signal strength we last heard from this node, regardless of any matches
+            existingNode.type = deviceData.type;
+            existingNode.label = deviceData.name;
+            existingNode.Status = deviceData.Status;
+            existingNode.lastStateChange = deviceData.lastStateChange;
+            existingNode.updated = new Date().getTime(); //update timestamp we last heard from this node, regardless of any matches
+            if (existingNode.alerts == undefined)
+                existingNode.alerts = new Object();
+
+            var entry = {
+                _id: id, 
+                updated: existingNode.updated, 
+                type: existingNode.type||undefined, 
+                label: existingNode.label||undefined,
+                descr: existingNode.descr||undefined,
+                hidden: existingNode.hidden||undefined, 
+                Status: existingNode.Status,
+                rssi: existingNode.rssi,
+                lastStateChange: existingNode.lastStateChange||undefined,
+                alerts: Object.keys(existingNode.alerts).length > 0 ? existingNode.alerts : undefined 
+            };
+        
+            db.findOne({_id:id}, function (err,doc){
+                if (doc == null) {
+                    db.insert(entry);
+                    logger.info(' [' + id + '] DB-Insert new _id:' + id);
+                } else {
+                    db.update({_id:id},{$set:entry},{}, function (err,numReplaced) {
+                        logger.info(' [' + id + '] DB-Updates:' + numReplaced);
+                    });
+                }
+            });
+            logger.info('UPDATING ENTRY: ' + JSON.stringify(entry));
+            io.sockets.emit('UPDATENODE', entry);
+            alertsDef.handleNodeAlerts(entry);
+        });
+    });
+  
+    socket.on('CONSOLE', function (msg) {
+        logger.info(msg);
+    });
+  
+    socket.on('SEND_DATA', function(node) {
+        logger.debug("In SEND_DATA function for node: " + JSON.stringify(node));
+        io.sockets.emit('UPDATENODE', node);
+    });
+
+    socket.on('UPDATE_DB_ENTRY', function (node) {
+        db.find({ _id : node._id }, function (err, entries) {
+            if (entries.length == 1) {
+                var dbNode = entries[0];
+                dbNode.type = node.type||undefined;
+                dbNode.label = node.label||undefined;
+                dbNode.descr = node.descr||undefined;
+                dbNode.hidden = (node.hidden == 1 ? 1 : undefined);
+                db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { 
+                    logger.info('UPDATE_DB_ENTRY records replaced:' + numReplaced);
+                });
+                io.sockets.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
+                logger.debug("UPDATE DB ENTRY found docs:" + entries.length);
+            }
+        });
+    });
+  
+    socket.on('EDITNODEALERT', function (nodeId, alertKey, newAlert) {
+        logger.debug('**** EDITNODEALERT  **** key:' + alertKey);
+        db.find({ _id : nodeId }, function (err, entries) {
+            if (entries.length == 1) {
+                var dbNode = entries[0];
+                if (!dbNode.alerts) {
+                    dbNode.alerts = {};
+                }
+                dbNode.alerts[alertKey] = newAlert;
+                db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) {
+                    logger.debug('DB Updated, records replaced:' + numReplaced);
+                });
+
+                if (dbNode.alerts[alertKey] && dbNode.alerts[alertKey].alertStatus)
+                    schedule(dbNode, alertKey);
+                else //either disabled or removed
+                    for(var s in scheduledAlerts) {
+                        if (scheduledAlerts[s].nodeId == nodeId && scheduledAlerts[s].alertKey == alertKey) {
+                            logger.info('**** REMOVING SCHEDULED ALERT - nodeId:' + nodeId + ' alert:' + alertKey);
+                            clearTimeout(scheduledAlerts[s].timer);
+                            scheduledAlerts.splice(scheduledAlerts.indexOf(scheduledAlerts[s]), 1)
+                        }
+                    }
+            
+                io.sockets.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
+            }
+        });
+    });
+  
+    socket.on('NODEACTION', function (node) {
+        if (node.nodeId && node.action) {
+            logger.info('NODEACTION sent: ' + JSON.stringify(node));
+            io.sockets.emit('ACTION', node);
+        }
+    });
+
+    socket.on('DELETENODE', function (nodeId) {
+        db.remove({ _id : nodeId }, function (err, removedCount) {
+            logger.info('DELETED entries: ' + removedCount);
+            db.find({ _id : { $exists: true } }, function (err, entries) {
+                io.sockets.emit('UPDATENODES', entries);
+            });
+        });
+        for(var s in scheduledAlerts) {
+            if (scheduledAlerts[s].nodeId == nodeId) {
+                logger.info('**** REMOVING SCHEDULED ALERT FOR DELETED NODE - NodeId:' + nodeId + ' alert:' + scheduledAlerts[s].eventKey);
+                clearTimeout(scheduledAlerts[s].timer);
+                scheduledAlerts.splice(scheduledAlerts.indexOf(scheduledAlerts[s]), 1);
+            }
+        }
+    });
+});
+
+// ************************************
+// ********** SCHEDULE SETUP **********
+// ************************************
+
+//keep track of scheduler based events - these need to be kept in sych with the UI
+//if UI removes an event, it needs to be cancelled from here as well;
+// if UI adds a scheduled event it needs to be scheduled and added here also
+scheduledAlerts = []; //each entry should be defined like this: {nodeId, eventKey, timer}
+  
+//schedule and register a scheduled type event
+function schedule(node, alertKey) {
+    var nextRunTimeout = node.alerts[alertKey].timeout;
+    var currentTime = new Date().getTime();
+    logger.info('**** ADDING ALERT - nodeId:' + node._id + ' event:' + alertKey + ' to run ' + (nextRunTimeout/60000).toFixed(2) + ' minutes after status is ' + node.alerts[alertKey].clientStatus);
+    var theTimer = setTimeout(function() {
+        if (node.alerts[alertKey].clientStatus == node.Status && currentTime - node.lastStateChange >= node.alerts[alertKey].timeout) {
+            alertsDef.availableAlerts[node.alerts[alertKey].alertType].execute(node);
+        }
+        runAndReschedule(alertsDef.availableAlerts[alertKey].execute, node, alertKey);
+    }, nextRunTimeout); //http://www.w3schools.com/jsref/met_win_settimeout.asp
+    scheduledAlerts.push({nodeId:node._id, alertKey:alertKey, timer:theTimer}); //save nodeId, eventKey and timer (needs to be removed if the event is disabled/removed from the UI)
+    //scheduledAlerts.push({nodeId:node._id, alertKey:alertKey}); //save nodeId, eventKey and timer (needs to be removed if the event is disabled/removed from the UI)
+}
+
+//run a scheduled event and reschedule it
+function runAndReschedule(functionToExecute, node, alertKey) {
+    functionToExecute(node, alertKey);
+    schedule(node, alertKey);
+}
+
+//this runs once at startup: register scheduled alerts that are enabled
+db.find({ alerts : { $exists: true } }, function (err, entries) {
+    for (var k in entries) {
+        for (var i in entries[k].alerts) {
+            if (entries[k].alerts[i].alertStatus) {
+                schedule(entries[k], i);
+            }
+        }
+    }
+});
+// ************************************
