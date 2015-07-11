@@ -1,3 +1,4 @@
+$(document).ready(function() {
         var nodes = {};        // this holds the current nodes data
         var selectedNodeId;    // points to the selected node ID
         var clientsDef;        // holds the definition of the clients (from server side clients.js)
@@ -394,3 +395,4 @@
 			"background-color": "#fee",
 			opacity: 0.80
 		}).appendTo("body");
+});
