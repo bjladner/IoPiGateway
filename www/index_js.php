@@ -11,7 +11,7 @@
   <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.min.js"></script>
   <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.time.min.js"></script>
   <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.selection.min.js"></script>
-  <link rel='stylesheet' type='text/css' href='index.css'/>
+  <link rel="stylesheet" type="text/css" href="index.css"/>
 </head>
 <body>
   <div data-role="page" id="homepage">
