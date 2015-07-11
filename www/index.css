@@ -1,0 +1,71 @@
+.ui-content { padding-top:0; }
+.btn-text, #loadingsocket { font-size: 32px; }
+#loadingsocket, #loadinggraph {padding:15px;}
+.labelbold { font-weight:bold !important; }
+#wrap { padding: 12px; }
+.ui-listview>li.hiddenNode { display:none; }
+.ui-listview>li.hiddenNodeShow { display:block; }
+.ui-li-count18 { font-size:18px; }
+.ui-li-count16 { font-size:16px; }
+.ui-li-countSTATIC {
+  position:static !important;
+  float:right;
+  font-size:16px;
+}
+
+.center-div{ margin: 0 auto; }
+.center-wrapper{ text-align: center; }
+.center-wrapper * { margin: 0 auto; }
+#nodeControls { padding: 0 0.5em 0 0.5em; }
+.listIcon20px { max-width:20px; }
+.ui-slider { width: 10em !important; }
+  
+textarea.ui-input-text {
+  height:auto;
+  font-size:15px;
+  font-weight:bold;
+  font-family:Courier New;
+}
+
+.icon {
+  display:inline-block;
+  white-space:nowrap;
+  max-width:20px;
+  max-height:20px;
+}
+  
+.nodeDetailLabel {
+  float:left;
+  font-weight:bold;
+  width: 110px;
+}
+  
+.lowbatt {
+  background:red;
+  color:white;
+  font-weight:bold;
+  display:none;
+}
+  
+/*styling of inline raw action controls*/
+.rawAction .ui-mini { margin:0; }
+.rawAction .ui-btn { margin:0; padding: .3em 0; }
+.rawAction a { margin:4px 0; }
+#rawActionIDspan {
+  padding: 12px 0 12px 12px;
+  float:left;
+  width:15%;
+}
+#rawActionTextspan {
+  padding: 12px 0;
+  float:left;
+  width:55%;
+}
+#rawActionSendspan {
+  padding: 12px 12px 12px 0;
+  float:left;
+  width:20%;
+}
+#rawActionIDspan div { border-radius: 0.3em 0 0 0.3em; }
+#rawActionTextspan div { border-radius: 0; }
+#rawActionSend { border-radius: 0 0.3em 0.3em 0; }
