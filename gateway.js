@@ -122,30 +122,13 @@ io.sockets.on('connection', function (socket) {
             existingNode.Status = deviceData.Status;
             existingNode.lastStateChange = deviceData.lastStateChange;
             existingNode.updated = new Date().getTime(); //update timestamp we last heard from this node, regardless of any matches
-			//if (existingNode.alerts == undefined)
-            //    existingNode.alerts = new Object();
 
-/*            var entry = {
-                _id: id, //
-                updated: existingNode.updated, //
-                type: existingNode.type||undefined, //
-                label: existingNode.label||undefined, //
-                descr: existingNode.descr||undefined,
-                hidden: existingNode.hidden||undefined, 
-                Status: existingNode.Status, //
-                rssi: existingNode.rssi, //
-                lastStateChange: existingNode.lastStateChange||undefined, //
-                alerts: Object.keys(existingNode.alerts).length > 0 ? existingNode.alerts : undefined 
-            };*/
-        
             db.findOne({_id:id}, function (err,doc){
                 if (doc == null) {
                     db.insert(existingNode);
-                    //db.insert(entry);
                     logger.info(' [' + id + '] DB-Insert new _id:' + id);
                 } else {
                     db.update({_id:id},{$set:existingNode},{}, function (err,numReplaced) {
-                    //db.update({_id:id},{$set:entry},{}, function (err,numReplaced) {
                         logger.info(' [' + id + '] DB-Updates:' + numReplaced);
                     });
                 }
@@ -153,9 +136,6 @@ io.sockets.on('connection', function (socket) {
             logger.info('UPDATING ENTRY: ' + JSON.stringify(existingNode));
             io.sockets.emit('UPDATENODE', existingNode);
             alertsDef.handleNodeAlerts(existingNode);
-            //logger.info('UPDATING ENTRY: ' + JSON.stringify(entry));
-            //io.sockets.emit('UPDATENODE', entry);
-            //alertsDef.handleNodeAlerts(entry);
         });
     });
   
