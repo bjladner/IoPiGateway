@@ -349,7 +349,7 @@
                 var agoResult = ago(timestamp);
                 $(this).css('color', agoResult.color);
                 $(this).prop('title', agoResult.text);
-            });
+            }); 
         }
     
         //refresh "updated X ago" indicators
