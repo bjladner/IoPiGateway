@@ -122,35 +122,40 @@ io.sockets.on('connection', function (socket) {
             existingNode.Status = deviceData.Status;
             existingNode.lastStateChange = deviceData.lastStateChange;
             existingNode.updated = new Date().getTime(); //update timestamp we last heard from this node, regardless of any matches
-            if (existingNode.alerts == undefined)
-                existingNode.alerts = new Object();
+			//if (existingNode.alerts == undefined)
+            //    existingNode.alerts = new Object();
 
-            var entry = {
-                _id: id, 
-                updated: existingNode.updated, 
-                type: existingNode.type||undefined, 
-                label: existingNode.label||undefined,
+/*            var entry = {
+                _id: id, //
+                updated: existingNode.updated, //
+                type: existingNode.type||undefined, //
+                label: existingNode.label||undefined, //
                 descr: existingNode.descr||undefined,
                 hidden: existingNode.hidden||undefined, 
-                Status: existingNode.Status,
-                rssi: existingNode.rssi,
-                lastStateChange: existingNode.lastStateChange||undefined,
+                Status: existingNode.Status, //
+                rssi: existingNode.rssi, //
+                lastStateChange: existingNode.lastStateChange||undefined, //
                 alerts: Object.keys(existingNode.alerts).length > 0 ? existingNode.alerts : undefined 
-            };
+            };*/
         
             db.findOne({_id:id}, function (err,doc){
                 if (doc == null) {
-                    db.insert(entry);
+                    db.insert(existingNode);
+                    //db.insert(entry);
                     logger.info(' [' + id + '] DB-Insert new _id:' + id);
                 } else {
-                    db.update({_id:id},{$set:entry},{}, function (err,numReplaced) {
+                    db.update({_id:id},{$set:existingNode},{}, function (err,numReplaced) {
+                    //db.update({_id:id},{$set:entry},{}, function (err,numReplaced) {
                         logger.info(' [' + id + '] DB-Updates:' + numReplaced);
                     });
                 }
             });
-            logger.info('UPDATING ENTRY: ' + JSON.stringify(entry));
-            io.sockets.emit('UPDATENODE', entry);
-            alertsDef.handleNodeAlerts(entry);
+            logger.info('UPDATING ENTRY: ' + JSON.stringify(existingNode));
+            io.sockets.emit('UPDATENODE', existingNode);
+            alertsDef.handleNodeAlerts(existingNode);
+            //logger.info('UPDATING ENTRY: ' + JSON.stringify(entry));
+            //io.sockets.emit('UPDATENODE', entry);
+            //alertsDef.handleNodeAlerts(entry);
         });
     });
   
@@ -190,7 +195,7 @@ io.sockets.on('connection', function (socket) {
                 }
                 dbNode.alerts[alertKey] = newAlert;
                 db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) {
-                    logger.debug('DB Updated, records replaced:' + numReplaced);
+                    logger.debug('DB alert Updated:' + numReplaced);
                 });
 
                 if (dbNode.alerts[alertKey] && dbNode.alerts[alertKey].alertStatus)
@@ -249,17 +254,21 @@ function schedule(node, alertKey) {
     logger.info('**** ADDING ALERT - nodeId:' + node._id + ' event:' + alertKey + ' to run ' + (nextRunTimeout/60000).toFixed(2) + ' minutes after status is ' + node.alerts[alertKey].clientStatus);
     var theTimer = setTimeout(function() {
         if (node.alerts[alertKey].clientStatus == node.Status && currentTime - node.lastStateChange >= node.alerts[alertKey].timeout) {
-            alertsDef.availableAlerts[node.alerts[alertKey].alertType].execute(node);
+            alertsDef.testAlert(node, alertKey);
+            //alertsDef.availableAlerts[node.alerts[alertKey].alertType].execute(node);
         }
-        runAndReschedule(alertsDef.availableAlerts[alertKey].execute, node, alertKey);
+        runAndReschedule(node, alertKey);
+        //runAndReschedule(alertsDef.availableAlerts[alertKey].execute, node, alertKey);
     }, nextRunTimeout); //http://www.w3schools.com/jsref/met_win_settimeout.asp
     scheduledAlerts.push({nodeId:node._id, alertKey:alertKey, timer:theTimer}); //save nodeId, eventKey and timer (needs to be removed if the event is disabled/removed from the UI)
     //scheduledAlerts.push({nodeId:node._id, alertKey:alertKey}); //save nodeId, eventKey and timer (needs to be removed if the event is disabled/removed from the UI)
 }
 
 //run a scheduled event and reschedule it
-function runAndReschedule(functionToExecute, node, alertKey) {
-    functionToExecute(node, alertKey);
+function runAndReschedule(node, alertKey) {
+//function runAndReschedule(functionToExecute, node, alertKey) {
+    alertsDef.testAlert(node, alertKey);
+    //functionToExecute(node, alertKey);
     schedule(node, alertKey);
 }
 

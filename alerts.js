@@ -75,7 +75,11 @@ alerts.prototype.testAlert = function(node, alertID){
     var enableCheck = (node.alerts[alertID].alertStatus);
     var statusCheck = (node.alerts[alertID].clientStatus == node.Status);
     var timeoutCheck = (timeInState >= node.alerts[alertID].timeout);
+
+    logger.info('Testing Alert: ' + alertID);
+
     if (enableCheck && statusCheck && timeoutCheck) {
+		logger.info('Sending Alert!!!');
         var subject = node.label + ' has been ' + node.Status + ' for ' + (timeInState/60000).toFixed(2) + ' minutes!';
         var body = node.label + ' is ' + node.Status;
         if (node.alerts[alertID].alertType == 'email')
