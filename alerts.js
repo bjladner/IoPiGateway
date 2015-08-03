@@ -12,14 +12,12 @@ function alerts() {
             this.availableAlerts.email = {
                 label: 'Email Notification',
                 icon: 'mail',
-                execute: function(){ this.testAlert(node, alertID); }
             };
         }
         if (cfg.sms.use){
             this.availableAlerts.sms = {
                 label: 'SMS Notification',
                 icon: 'comment',
-                execute: function(){ this.testAlert(node, alertID); }
             };
         }
     }
@@ -28,7 +26,6 @@ function alerts() {
         this.availableAlerts.pushbullet = {
             label: 'Pushbullet Notification',
             icon: 'mail',
-            execute: function(){ this.testAlert(node, alertID); }
          };
     }
     if (cfg.twitter.use) {
@@ -36,7 +33,6 @@ function alerts() {
         this.availableAlerts.twitter = {
             label: 'Twitter Notification',
             icon: 'mail',
-            execute: function(){ this.testAlert(node, alertID); }
         };
     }
 }
@@ -79,7 +75,7 @@ alerts.prototype.testAlert = function(node, alertID){
     logger.info('Testing Alert: ' + alertID);
 
     if (enableCheck && statusCheck && timeoutCheck) {
-		logger.info('Sending Alert!!!');
+        logger.info('Sending Alert!!!');
         var subject = node.label + ' has been ' + node.Status + ' for ' + (timeInState/60000).toFixed(2) + ' minutes!';
         var body = node.label + ' is ' + node.Status;
         if (node.alerts[alertID].alertType == 'email')
