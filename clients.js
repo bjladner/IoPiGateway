@@ -4,8 +4,7 @@ function clients() {
     this.garage = {
         label: 'Garage Opener',
         icon: 'icon_garage.png',
-        // Triggers to send alerts
-        // list alert triggers and variables like door open for 5 minutes
+        // Available triggers to send alerts
         triggers: {
             opened: {label: 'Open'},
             closed: {label: 'Closed'}

@@ -108,7 +108,7 @@ io.sockets.on('connection', function (socket) {
         io.sockets.emit('UPDATENODES', entries);
     });
   
-    socket.on('INIT_DEVICE', function (deviceData) {
+    socket.on('SEND_DATA', function (deviceData) {
         var id = deviceData.deviceID;
         logger.info("Initializing Device: " + JSON.stringify(deviceData));
         db.find({ _id : id }, function (err, entries) {
@@ -116,14 +116,37 @@ io.sockets.on('connection', function (socket) {
             if (entries.length == 1)
                 existingNode = entries[0];
             existingNode._id = id;
-            existingNode.rssi = deviceData.signalStrength; //update signal strength we last heard from this node, regardless of any matches
+            //existingNode.rssi = deviceData.signalStrength; //update signal strength we last heard from this node, regardless of any matches
             existingNode.type = deviceData.type;
             existingNode.label = deviceData.name;
             existingNode.Status = deviceData.Status;
             existingNode.lastStateChange = deviceData.lastStateChange;
             existingNode.updated = new Date().getTime(); //update timestamp we last heard from this node, regardless of any matches
+			
+			// set up existing alert schedules
+			if (existingNode.alerts) {
+			    for (var alertID in existingNode.alerts) {
+					if (existingNode.alerts[alertID].alertStatus) {
+					    if (existingNode.Status == existingNode.alerts[alertID].clientStatus) {
+						    addSchedule(existingNode, alertID);
+					    } else {
+							removeSchedule(existingNode, alertID);
+						}
+					}
+				}
+			}
+			
+			// add entry into database
+			if (entries.length == 0) {
+                db.insert(existingNode);
+                logger.info(' [' + id + '] DB-Insert new _id:' + id);
+            } else {
+                db.update({_id:id},{$set:existingNode},{}, function (err,numReplaced) {
+                    logger.info(' [' + id + '] DB-Updates:' + numReplaced);
+                });
+			}
 
-            db.findOne({_id:id}, function (err,doc){
+/*            db.findOne({_id:id}, function (err,doc){
                 if (doc == null) {
                     db.insert(existingNode);
                     logger.info(' [' + id + '] DB-Insert new _id:' + id);
@@ -132,7 +155,7 @@ io.sockets.on('connection', function (socket) {
                         logger.info(' [' + id + '] DB-Updates:' + numReplaced);
                     });
                 }
-            });
+            });*/
             logger.info('UPDATING ENTRY: ' + JSON.stringify(existingNode));
             io.sockets.emit('UPDATENODE', existingNode);
             alertsDef.handleNodeAlerts(existingNode);
@@ -143,11 +166,6 @@ io.sockets.on('connection', function (socket) {
         logger.info(msg);
     });
   
-    socket.on('SEND_DATA', function(node) {
-        logger.debug("In SEND_DATA function for node: " + JSON.stringify(node));
-        io.sockets.emit('UPDATENODE', node);
-    });
-
     socket.on('UPDATE_DB_ENTRY', function (node) {
         db.find({ _id : node._id }, function (err, entries) {
             if (entries.length == 1) {
@@ -170,11 +188,18 @@ io.sockets.on('connection', function (socket) {
         db.find({ _id : nodeId }, function (err, entries) {
             if (entries.length == 1) {
                 var dbNode = entries[0];
-                if (!dbNode.alerts) {
-                    dbNode.alerts = {};
-                }
-                dbNode.alerts[alertKey] = newAlert;
-                db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) {
+				
+				if (newAlert == null) {
+					if (dbNode.alerts[alertKey])
+    				    delete dbNode.alerts[alertKey];
+				} else {
+                    if (!dbNode.alerts) {
+                        dbNode.alerts = {};
+                    }
+                    dbNode.alerts[alertKey] = newAlert;
+ 			    }
+                
+				db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) {
                     logger.debug('DB alert Updated:' + numReplaced);
                 });
 
@@ -188,7 +213,6 @@ io.sockets.on('connection', function (socket) {
                             scheduledAlerts.splice(scheduledAlerts.indexOf(scheduledAlerts[s]), 1)
                         }
                     }
-            
                 io.sockets.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
             }
         });
