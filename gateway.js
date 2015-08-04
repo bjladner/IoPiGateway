@@ -128,9 +128,9 @@ io.sockets.on('connection', function (socket) {
 	            for (var alertKey in existingNode.alerts) {
 		            if (existingNode.alerts[alertKey].alertStatus) {
 		                if (existingNode.Status == existingNode.alerts[alertKey].clientStatus) {
-			                addSchedule(existingNode, alertKey);
+			                //addSchedule(existingNode, alertKey);
 		                } else {
-			                removeSchedule(existingNode._id, alertKey);
+			               //removeSchedule(existingNode._id, alertKey);
 		                }
 		            }
 		        }
@@ -138,12 +138,12 @@ io.sockets.on('connection', function (socket) {
 			
 	        // add entry into database
 	        if (entries.length == 0) {
-                db.insert(existingNode);
-                logger.info(' [' + id + '] DB-Insert new _id:' + id);
-            } else {
-                db.update({_id:id},{$set:existingNode},{}, function (err,numReplaced) {
-                    logger.info(' [' + id + '] DB-Updates:' + numReplaced);
-                });
+                    db.insert(existingNode);
+                    logger.info(' [' + id + '] DB-Insert new _id:' + id);
+                } else {
+                    db.update({_id:id},{$set:existingNode},{}, function (err,numReplaced) {
+                        logger.info(' [' + id + '] DB-Updates:' + numReplaced);
+                    });
 	        }
 
 /*            db.findOne({_id:id}, function (err,doc){
@@ -204,9 +204,9 @@ io.sockets.on('connection', function (socket) {
                 });
 
                 if (dbNode.alerts[alertKey] && dbNode.alerts[alertKey].alertStatus)
-			        addSchedule(dbNode, alertKey);
+			        //addSchedule(dbNode, alertKey);
 		        } else {
-			        removeSchedule(dbNode._id, alertKey);
+			        //removeSchedule(dbNode._id, alertKey);
 		        }
                 //    schedule(dbNode, alertKey);
                 //else //either disabled or removed
@@ -236,7 +236,7 @@ io.sockets.on('connection', function (socket) {
                 io.sockets.emit('UPDATENODES', entries);
             });
         });
-		removeSchedule(nodeId, null);
+		//removeSchedule(nodeId, null);
         //for(var s in scheduledAlerts) {
         //    if (scheduledAlerts[s].nodeId == nodeId) {
         //        logger.info('**** REMOVING SCHEDULED ALERT FOR DELETED NODE - NodeId:' + nodeId + ' alert:' + scheduledAlerts[s].eventKey);
