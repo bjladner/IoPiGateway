@@ -123,28 +123,28 @@ io.sockets.on('connection', function (socket) {
             existingNode.lastStateChange = deviceData.lastStateChange;
             existingNode.updated = new Date().getTime(); //update timestamp we last heard from this node, regardless of any matches
 			
-			// set up existing alert schedules
-			if (existingNode.alerts) {
-			    for (var alertID in existingNode.alerts) {
-					if (existingNode.alerts[alertID].alertStatus) {
-					    if (existingNode.Status == existingNode.alerts[alertID].clientStatus) {
-						    addSchedule(existingNode, alertID);
-					    } else {
-							removeSchedule(existingNode, alertID);
-						}
-					}
-				}
-			}
+	        // set up existing alert schedules
+	        if (existingNode.alerts) {
+	            for (var alertKey in existingNode.alerts) {
+		            if (existingNode.alerts[alertKey].alertStatus) {
+		                if (existingNode.Status == existingNode.alerts[alertKey].clientStatus) {
+			                addSchedule(existingNode, alertKey);
+		                } else {
+			                removeSchedule(existingNode._id, alertKey);
+		                }
+		            }
+		        }
+	        }
 			
-			// add entry into database
-			if (entries.length == 0) {
+	        // add entry into database
+	        if (entries.length == 0) {
                 db.insert(existingNode);
                 logger.info(' [' + id + '] DB-Insert new _id:' + id);
             } else {
                 db.update({_id:id},{$set:existingNode},{}, function (err,numReplaced) {
                     logger.info(' [' + id + '] DB-Updates:' + numReplaced);
                 });
-			}
+	        }
 
 /*            db.findOne({_id:id}, function (err,doc){
                 if (doc == null) {
@@ -189,30 +189,34 @@ io.sockets.on('connection', function (socket) {
             if (entries.length == 1) {
                 var dbNode = entries[0];
 				
-				if (newAlert == null) {
-					if (dbNode.alerts[alertKey])
-    				    delete dbNode.alerts[alertKey];
-				} else {
+		        if (newAlert == null) {
+		            if (dbNode.alerts[alertKey])
+    		            delete dbNode.alerts[alertKey];
+		        } else {
                     if (!dbNode.alerts) {
                         dbNode.alerts = {};
                     }
                     dbNode.alerts[alertKey] = newAlert;
- 			    }
+ 	            }
                 
-				db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) {
+		        db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) {
                     logger.debug('DB alert Updated:' + numReplaced);
                 });
 
                 if (dbNode.alerts[alertKey] && dbNode.alerts[alertKey].alertStatus)
-                    schedule(dbNode, alertKey);
-                else //either disabled or removed
-                    for(var s in scheduledAlerts) {
-                        if (scheduledAlerts[s].nodeId == nodeId && scheduledAlerts[s].alertKey == alertKey) {
-                            logger.info('**** REMOVING SCHEDULED ALERT - nodeId:' + nodeId + ' alert:' + alertKey);
-                            clearTimeout(scheduledAlerts[s].timer);
-                            scheduledAlerts.splice(scheduledAlerts.indexOf(scheduledAlerts[s]), 1)
-                        }
-                    }
+			        addSchedule(dbNode, alertKey);
+		        } else {
+			        removeSchedule(dbNode._id, alertKey);
+		        }
+                //    schedule(dbNode, alertKey);
+                //else //either disabled or removed
+                //    for(var s in scheduledAlerts) {
+                //        if (scheduledAlerts[s].nodeId == nodeId && scheduledAlerts[s].alertKey == alertKey) {
+                //            logger.info('**** REMOVING SCHEDULED ALERT - nodeId:' + nodeId + ' alert:' + alertKey);
+                //            clearTimeout(scheduledAlerts[s].timer);
+                //            scheduledAlerts.splice(scheduledAlerts.indexOf(scheduledAlerts[s]), 1)
+                //        }
+                //    }
                 io.sockets.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
             }
         });
@@ -232,13 +236,14 @@ io.sockets.on('connection', function (socket) {
                 io.sockets.emit('UPDATENODES', entries);
             });
         });
-        for(var s in scheduledAlerts) {
-            if (scheduledAlerts[s].nodeId == nodeId) {
-                logger.info('**** REMOVING SCHEDULED ALERT FOR DELETED NODE - NodeId:' + nodeId + ' alert:' + scheduledAlerts[s].eventKey);
-                clearTimeout(scheduledAlerts[s].timer);
-                scheduledAlerts.splice(scheduledAlerts.indexOf(scheduledAlerts[s]), 1);
-            }
-        }
+		removeSchedule(nodeId, null);
+        //for(var s in scheduledAlerts) {
+        //    if (scheduledAlerts[s].nodeId == nodeId) {
+        //        logger.info('**** REMOVING SCHEDULED ALERT FOR DELETED NODE - NodeId:' + nodeId + ' alert:' + scheduledAlerts[s].eventKey);
+        //        clearTimeout(scheduledAlerts[s].timer);
+        //        scheduledAlerts.splice(scheduledAlerts.indexOf(scheduledAlerts[s]), 1);
+        //    }
+        //}
     });
 });
 
@@ -252,7 +257,8 @@ io.sockets.on('connection', function (socket) {
 scheduledAlerts = []; //each entry should be defined like this: {nodeId, eventKey, timer}
   
 //schedule and register a scheduled type event
-function schedule(node, alertKey) {
+//function schedule(node, alertKey) {
+function addSchedule(node, alertKey) {
     var nextRunTimeout = node.alerts[alertKey].timeout;
     var currentTime = new Date().getTime();
     logger.info('**** ADDING ALERT - nodeId:' + node._id + ' event:' + alertKey + ' to run ' + (nextRunTimeout/60000).toFixed(2) + ' minutes after status is ' + node.alerts[alertKey].clientStatus);
@@ -261,29 +267,41 @@ function schedule(node, alertKey) {
             alertsDef.testAlert(node, alertKey);
             //alertsDef.availableAlerts[node.alerts[alertKey].alertType].execute(node);
         }
-        runAndReschedule(node, alertKey);
+        //runAndReschedule(node, alertKey);
         //runAndReschedule(alertsDef.availableAlerts[alertKey].execute, node, alertKey);
     }, nextRunTimeout); //http://www.w3schools.com/jsref/met_win_settimeout.asp
     scheduledAlerts.push({nodeId:node._id, alertKey:alertKey, timer:theTimer}); //save nodeId, eventKey and timer (needs to be removed if the event is disabled/removed from the UI)
     //scheduledAlerts.push({nodeId:node._id, alertKey:alertKey}); //save nodeId, eventKey and timer (needs to be removed if the event is disabled/removed from the UI)
 }
 
-//run a scheduled event and reschedule it
-function runAndReschedule(node, alertKey) {
-//function runAndReschedule(functionToExecute, node, alertKey) {
-    alertsDef.testAlert(node, alertKey);
-    //functionToExecute(node, alertKey);
-    schedule(node, alertKey);
-}
-
-//this runs once at startup: register scheduled alerts that are enabled
-db.find({ alerts : { $exists: true } }, function (err, entries) {
-    for (var k in entries) {
-        for (var i in entries[k].alerts) {
-            if (entries[k].alerts[i].alertStatus) {
-                schedule(entries[k], i);
+function removeSchedule(nodeId, alertKey) {
+    for(var s in scheduledAlerts) {
+        if (scheduledAlerts[s].nodeId == nodeId) {
+            if (alertKey == null || scheduledAlerts[s].alertKey == alertKey){
+                logger.info('**** REMOVING SCHEDULED ALERT - nodeId:' + nodeId + 'alert:' + scheduledAlerts[s].alertKey);
+                clearTimeout(scheduledAlerts[s].timer);
+                scheduledAlerts.splice(scheduledAlerts.indexOf(scheduledAlerts[s]), 1)
             }
         }
     }
-});
+}
+
+//run a scheduled event and reschedule it
+//function runAndReschedule(node, alertKey) {
+//function runAndReschedule(functionToExecute, node, alertKey) {
+//    alertsDef.testAlert(node, alertKey);
+    //functionToExecute(node, alertKey);
+//    schedule(node, alertKey);
+//}
+
+//this runs once at startup: register scheduled alerts that are enabled
+//db.find({ alerts : { $exists: true } }, function (err, entries) {
+//    for (var k in entries) {
+//        for (var i in entries[k].alerts) {
+//            if (entries[k].alerts[i].alertStatus) {
+//                schedule(entries[k], i);
+//            }
+//        }
+//    }
+//});
 // ************************************
