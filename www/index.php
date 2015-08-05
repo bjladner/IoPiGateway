@@ -545,30 +545,25 @@
         });
     
         $("#rawActionSend").click("tap", function(event) {
-            socket.emit("NODEACTION", {nodeId:$("#rawActionID").val(), action:$("#rawActionText").val()});
-        });
-    
-        //enforce positive numeric input
-        $("#rawActionID").on("keypress keyup blur",function (event) {    
-            $(this).val($(this).val().replace(/[^\d].+/, ""));
-            if ((event.which < 48 || event.which > 57) || $(this).val().length > 3) {
-                event.preventDefault();
+            var node = {
+                nodeId: $("#rawActionID").val(),
+                action: $("#rawActionText").val()
             }
-            //max node ID is 255 with packet header defaults in RFM69 library
-            if ($(this).val() > 255) $(this).val(255);
+			if (node.nodeId == "svr") {
+				serverAction(node.action);
+			} else {
+				socket.emit("NODEACTION", node);
+			}
         });
     
-    //graph value tooltips container
-    $("<div id='tooltip'></div>").css({
-			position: "absolute",
-			display: "none",
-                        fontSize: "11px",
-			border: "1px solid #fdd",
-			padding: "2px",
-			"background-color": "#fee",
-			opacity: 0.80
-		}).appendTo("body");
-  });
+	    function serverAction(action) {
+			LOG(action);
+			if (action == "sched") {
+				socket.emit("SCHEDULE");
+			}
+		}
+		
+    });
   </script>
 </body>
 </html>

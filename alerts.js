@@ -72,10 +72,13 @@ alerts.prototype.testAlert = function(node, alertID){
     var statusCheck = (node.alerts[alertID].clientStatus == node.Status);
     var timeoutCheck = (timeInState >= node.alerts[alertID].timeout);
 
-    logger.info('Testing Alert: ' + alertID);
+    logger.debug('Testing Alert: ' + alertID + ', enabled: ' + enableCheck + ', status match: ' + statusCheck + ', timeout met: ' + timeoutCheck);
+	logger.debug('Node last state change: ' + node.lastStateChange);
+    logger.debug('Alert timeout: ' + node.alerts[alertID].timeout);
+    logger.debug('Current time: ' + currentTime);
 
     if (enableCheck && statusCheck && timeoutCheck) {
-        logger.info('Sending Alert!!!');
+        logger.debug('Sending Alert!!!');
         var subject = node.label + ' has been ' + node.Status + ' for ' + (timeInState/60000).toFixed(2) + ' minutes!';
         var body = node.label + ' is ' + node.Status;
         if (node.alerts[alertID].alertType == 'email')
@@ -83,7 +86,7 @@ alerts.prototype.testAlert = function(node, alertID){
         if  (node.alerts[alertID].alertType == 'sms')
             this.sendSMS(subject, body);
         if (node.alerts[alertID].alertType == 'pushbullet')
-            this.sendPushbullet(subject, body);
+            this.sendPush(subject, body);
         if (node.alerts[alertID].alertType == 'twitter')
              this.sendTwitter(subject, body);
     }
