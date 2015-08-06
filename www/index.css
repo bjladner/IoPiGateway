@@ -40,13 +40,6 @@ textarea.ui-input-text {
   width: 110px;
 }
   
-.lowbatt {
-  background:red;
-  color:white;
-  font-weight:bold;
-  display:none;
-}
-  
 /*styling of inline raw action controls*/
 .rawAction .ui-mini { margin:0; }
 .rawAction .ui-btn { margin:0; padding: .3em 0; }

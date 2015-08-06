@@ -110,7 +110,7 @@ io.sockets.on('connection', function (socket) {
   
     socket.on('SEND_DATA', function (deviceData) {
         var id = deviceData.deviceID;
-        logger.info("Initializing Device: " + JSON.stringify(deviceData));
+        logger.info("Updating node: " + deviceData.name);
         db.find({ _id : id }, function (err, entries) {
             var existingNode = new Object();
             if (entries.length == 1)
@@ -156,7 +156,6 @@ io.sockets.on('connection', function (socket) {
                     });
                 }
             });*/
-            logger.info('UPDATING ENTRY: ' + JSON.stringify(existingNode));
             io.sockets.emit('UPDATENODE', existingNode);
             alertsDef.handleNodeAlerts(existingNode);
         });

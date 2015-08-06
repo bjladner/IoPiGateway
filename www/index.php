@@ -53,7 +53,7 @@
   
   <div data-role="page" id="nodedetails">
     <div data-role="header">
-      <h3><span id="nodeDetailTitle">Node details</span> <span class="nodeUpdated">x</span></h3>
+      <h3><span id="nodeDetailTitle">Node details</span> <span class="nodeUpdated">x</span> <span id="nodeDetailStatus">Status</span></h3>
       <a id="node_update" href="#homepage" class="ui-btn ui-btn-inline ui-btn-b ui-shadow ui-corner-all ui-icon-home ui-btn-icon-left ui-mini ui-btn-notext">Home</a>
       
       <div class="ui-btn-right" data-role="controlgroup" data-type="horizontal">
@@ -91,9 +91,6 @@
       </div>
 
       <span class="nodeDetailLabel">Node ID:</span><span class="nodeID">x</span><br/>
-      <!--<span class="nodeDetailLabel">Updated:</span><span class="nodeUpdated">x</span><br/>-->
-      <!--<div class="nodeBattWrap"><span class="nodeDetailLabel">Battery:</span><span class="nodeBatt">x</span></div>-->
-      <span class="nodeDetailLabel">RSSI:</span><span class="nodeRSSI">x</span><br/>
     </div>
   </div>
 
@@ -391,6 +388,7 @@
             socket.emit("CONSOLE", "In refreshNodeDetails function for " + node.label);
             $('#nodeLabel').val(node.label || '');
             $('#nodeDetailTitle').html(node.label || 'Node details');
+			$('#nodeDetailStatus').html(' - ' + node.Status + ' - ' || 'Node status');
             $('#nodeClientType').val(node.type || '');
             $("#nodeClientType").selectmenu('refresh',true);
             $('#nodeDescr').val(node.descr || '');
@@ -398,7 +396,6 @@
             $('#nodeHidden').slider().slider('refresh');
      
             $('.nodeID').html(node._id);
-            $('.nodeRSSI').html(node.rssi);
             $('.nodeUpdated').html(ago(node.updated, false).tag);
       
             //display alerts list

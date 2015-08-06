@@ -16,19 +16,3 @@ function clients() {
         }
     };
 }
-
-// **********************************
-// ********** GARAGE SETUP **********
-// **********************************
-
-clients.prototype.changeButton = function(door) {
-    if (door.Status = 'Open') {
-        this.garage.controls.change.label = 'Close!';
-        this.garage.controls.change.icon = 'arrow-d';cd 
-        this.garage.controls.change.css = 'background-color:#FF9B9B;';
-    } else {
-        this.garage.controls.change.label = 'Open!';
-        this.garage.controls.change.icon = 'arrow-u';
-        this.garage.controls.change.css = 'background-color:#9BFFBE;color:#000000';
-    }
-}
