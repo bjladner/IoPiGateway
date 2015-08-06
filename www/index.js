@@ -1,9 +1,14 @@
+$(function() {                                                                  
+//$(document).ready(function() {                                                
+//$(window).on('load', function() {                                             
+                                                                                
+var io = require('socket.io');                                                  
+                                                                                
 var nodes = {};        // this holds the current nodes data
 var selectedNodeId;    // points to the selected node ID
 var clientsDef;        // holds the definition of the clients (from server side clients.js)
 var alertsDef;         // holds the definition of the alerts (from server side alerts.js)
 var showHiddenNodes=false;
-var socket = io.connect('<?php echo $_SERVER['HTTP_HOST']; ?>', {'connect timeout': 1000}); //limit chrome xhr-polling fall back delay
 $('#nodeList').hide();
 
 function LOG(data) {
@@ -399,3 +404,5 @@ function serverAction(action) {
 		socket.emit("SCHEDULE");
 	}
 }
+
+});

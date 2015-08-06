@@ -156,5 +156,16 @@
       <textarea name="log" id="log" rows="10" style="font-size:10px;"></textarea>
     </div>
   </div>
+  
+  <script type="text/javascript">
+    $(function(){
+        var socket = io.connect('<?php echo $_SERVER['HTTP_HOST']; ?>', {'connect timeout': 1000}); //limit chrome xhr-polling fall back delay
+
+        socket.on('connect', function(){
+            LOG('Connected!');
+            $('#loadingSocket').html('<span style="color:#2d0">Connected!</span><br/><br/>Waiting for data..');
+        });
+    });
+  </script>
 </body>
 </html>
