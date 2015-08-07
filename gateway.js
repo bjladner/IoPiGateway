@@ -121,7 +121,6 @@ io.sockets.on('connection', function (socket) {
             existingNode.label = deviceData.name;
             existingNode.Status = deviceData.Status;
             existingNode.lastStateChange = deviceData.lastStateChange;
-			existingNode.clientInfo = deviceData.clientInfo;
             existingNode.updated = new Date().getTime(); //update timestamp we last heard from this node, regardless of any matches
 			
 	        // set up existing alert schedules
@@ -149,6 +148,27 @@ io.sockets.on('connection', function (socket) {
 
             io.sockets.emit('UPDATENODE', existingNode);
             alertsDef.handleNodeAlerts(existingNode);
+        });
+    });
+  
+    socket.on('CLIENT_INFO', function (deviceData) {
+        db.find({ _id : deviceData.deviceID }, function (err, entries) {
+            if (entries.length == 1) {
+                var existingNode = entries[0];
+                existingNode.infoUpdate = deviceData.lastUpdate||undefined;
+                existingNode.rssi = deviceData.wifi||undefined;
+                existingNode.uptime = deviceData.uptime||undefined;
+                existingNode.cpuTemp = deviceData.cpuTemp||undefined;
+                existingNode.temperature = deviceData.temperature||undefined;
+                existingNode.humidity = deviceData.humidity||undefined;
+                existingNode.photo = deviceData.photo||undefined;
+			
+                db.update({_id:deviceData.deviceID},{$set:existingNode},{}, function (err,numReplaced) {
+                    logger.info(' [' + deviceData.deviceID + '] CLIENT_INFO records replaced:' + numReplaced);
+                });
+                io.sockets.emit('UPDATENODE', existingNode);
+                logger.debug("CLIENT INFO found docs:" + entries.length);
+            }
         });
     });
   
