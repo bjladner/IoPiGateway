@@ -515,27 +515,49 @@
         });
     
         $("#addAlert_OK").click("tap", function(event) {
-            var alertID = $('#addAlertType').val();
+            var alertType = $('#addAlertType').val();
 			LOG("adding alertID = " + alertID);
-            // TODO: Add unique alertIDs to have multiple alerts of the same type
-            //var count = 0;
-            //if (nodes[selectedNodeID].alerts) {
-            //    for (var alrt in nodes[selectedNodeID].alerts) {
-            //        if (nodes[selectedNodeID].alerts[alrt].alertType == alertID) {
-            //            count++;
-            //        }
-            //    }
-            //}
-            //alertID = alertID + count;
+            var count = 0;
+            if (nodes[selectedNodeID].alerts) {
+                count = alertIndex(nodes[selectedNodeID].alerts, alertType);
+            }
+            alertID = alertType + count;
             var newAlert = {
                 alertStatus: true,
-                alertType: alertID,
+                alertType: alertType,
                 timeout: $('#addAlertTime').val() * 1000 * 60, // convert to minutes
                 clientStatus: parseInt($('#addAlertState').val()) ? 'Closed' : 'Open',
                 destination: $('#addAlertDest').val()
             }
             socket.emit('EDITNODEALERT', selectedNodeId, alertID, newAlert);
         });
+        
+        function alertIndex(alerts, alertType) {
+            // return the lowest available index fot specific alertType
+            var count = 0;
+            var indices = [];
+            var skipIndex = false;  
+            for (new alert in alerts) {
+                if (alerts[alert].alertType == alertType) {
+                    indices[count] = alert.substring(alertType.length, alert.length);
+                    count++;
+                }
+            }
+            if (count == 0) {
+                return 0;
+            } else {
+                for (var i = 0, i < count, count++) {
+                    skipIndex = false;
+                    for (new index in indicies) {
+                        if (indicies[index] == i)
+                            skipIndex = true;
+                    }
+                    if (!skipIndex)
+                        return i;
+                }
+                return count;
+            }
+        }
 
         $("#deleteNode_yes").click("tap", function(event) {
             nodes[selectedNodeId] = undefined;
