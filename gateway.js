@@ -121,6 +121,7 @@ io.sockets.on('connection', function (socket) {
             existingNode.label = deviceData.name;
             existingNode.Status = deviceData.Status;
             existingNode.lastStateChange = deviceData.lastStateChange;
+			existingNode.clientInfo = deviceData.clientInfo;
             existingNode.updated = new Date().getTime(); //update timestamp we last heard from this node, regardless of any matches
 			
 	        // set up existing alert schedules
@@ -146,16 +147,6 @@ io.sockets.on('connection', function (socket) {
                     });
 	        }
 
-/*            db.findOne({_id:id}, function (err,doc){
-                if (doc == null) {
-                    db.insert(existingNode);
-                    logger.info(' [' + id + '] DB-Insert new _id:' + id);
-                } else {
-                    db.update({_id:id},{$set:existingNode},{}, function (err,numReplaced) {
-                        logger.info(' [' + id + '] DB-Updates:' + numReplaced);
-                    });
-                }
-            });*/
             io.sockets.emit('UPDATENODE', existingNode);
             alertsDef.handleNodeAlerts(existingNode);
         });
@@ -164,6 +155,9 @@ io.sockets.on('connection', function (socket) {
     socket.on('CONSOLE', function (msg) {
         logger.info(msg);
     });
+	
+	socket.on('CLIENT_INFO', function(clientInfo) {
+	});
   
     socket.on('UPDATE_DB_ENTRY', function (node) {
         db.find({ _id : node._id }, function (err, entries) {

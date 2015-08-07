@@ -280,7 +280,7 @@
                 nodes[node._id] = node;
                 var listItem = '<li id="' +  node._id + '"><a node-id="' + node._id;
                 listItem = listItem + '" href="#nodedetails" class="nodedetails"><img class="productimg" src="images/'+getNodeIcon(node.type)+'">';
-                listItem = listItem + '<h2>' + (node.label || node._id) + ' ' + resolveRSSIImage(node.clientInfo.wifi) + ' ' + ago(node.updated, 0).tag;
+                listItem = listItem + '<h2>' + (node.label || node._id) + ' ' + resolveRSSIImage(node.rssi) + ' ' + ago(node.updated, 0).tag;
                 listItem = listItem + (node.hidden ? ' <img class="listIcon20px" src="images/icon_hidden.png" />' : '') + '</h2>';
                 listItem = listItem + '<p>' + (node.descr || '&nbsp;') + '</p>';
                 listItem = listItem + '<span class="ui-li-count ui-li-count16">' + node.Status + '</span></a></li>';
@@ -341,6 +341,12 @@
                 $(this).css('color', agoResult.color);
                 $(this).html(agoResult.text);
             });
+            $("span.nodeMetricAgo").each(function(){
+                var timestamp = parseInt($(this).attr('data-time'));
+                var agoResult = ago(timestamp);
+                $(this).css('color', agoResult.color);
+                $(this).prop('title', agoResult.text);
+            }); 
         }
     
         //refresh "updated X ago" indicators
