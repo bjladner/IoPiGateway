@@ -93,7 +93,7 @@ io.use(function(socket, next) {
             logger.info('IDENTITY ACCEPTED: from local network');
             next();
         } else {
-            logger.info('REJECTED IDENTITY, not coming from local network');
+            logger.error('REJECTED IDENTITY, not coming from local network');
             next(new Error('REJECTED IDENTITY, not coming from local network'));
         }
     }
@@ -156,9 +156,6 @@ io.sockets.on('connection', function (socket) {
         logger.info(msg);
     });
 	
-	socket.on('CLIENT_INFO', function(clientInfo) {
-	});
-  
     socket.on('UPDATE_DB_ENTRY', function (node) {
         db.find({ _id : node._id }, function (err, entries) {
             if (entries.length == 1) {
@@ -224,7 +221,8 @@ io.sockets.on('connection', function (socket) {
     });
 	
     socket.on('SCHEDULE', function () {
-        io.sockets.emit('LOG', scheduledAlerts);
+        logger.info("Scheduled Alerts: " + scheduledAlerts);
+        //io.sockets.emit('LOG', scheduledAlerts);
     });
 });
 
