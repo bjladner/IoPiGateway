@@ -152,7 +152,7 @@ io.sockets.on('connection', function (socket) {
     });
   
     socket.on('CLIENT_INFO', function (deviceData) {
-        db.find({ _id : deviceData.deviceID }, function (err, entries) {
+        db.find({ _id : deviceData.nodeID }, function (err, entries) {
             if (entries.length == 1) {
                 var existingNode = entries[0];
                 existingNode.infoUpdate = deviceData.lastUpdate||undefined;
@@ -163,8 +163,8 @@ io.sockets.on('connection', function (socket) {
                 existingNode.humidity = deviceData.humidity||undefined;
                 existingNode.photo = deviceData.photo||undefined;
 			
-                db.update({_id:deviceData.deviceID},{$set:existingNode},{}, function (err,numReplaced) {
-                    logger.info(' [' + deviceData.deviceID + '] CLIENT_INFO records replaced:' + numReplaced);
+                db.update({_id:deviceData.nodeID},{$set:existingNode},{}, function (err,numReplaced) {
+                    logger.info(' [' + deviceData.nodeID + '] CLIENT_INFO records replaced:' + numReplaced);
                 });
                 io.sockets.emit('UPDATENODE', existingNode);
                 logger.debug("CLIENT INFO found docs:" + entries.length);
