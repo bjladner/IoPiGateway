@@ -91,6 +91,12 @@
       </div>
 
       <span class="nodeDetailLabel">Node ID:</span><span class="nodeID">x</span><br/>
+      <span class="nodeDetailLabel">Wifi Signal:</span><span class="rssi">x</span><br/>
+      <span class="nodeDetailLabel">Client Uptime:</span><span class="upTime">x</span><br/>
+      <span class="nodeDetailLabel">CPU Temp:</span><span class="cpuTemp">x</span><br/>
+      <span class="nodeDetailLabel">Room Temp:</span><span class="roomTemp">x</span><br/>
+      <span class="nodeDetailLabel">Humidity:</span><span class=".humidity">x</span><br/>
+      <span class="nodeDetailLabel">Last Sensor Update:</span><span class="infoUpdate">x</span><br/>
     </div>
   </div>
 
@@ -390,6 +396,12 @@
             $('#nodeHidden').slider().slider('refresh');
      
             $('.nodeID').html(node._id);
+            $('.rssi').html(node.rssi);
+            $('.upTime').html(node.uptime);
+            $('.cpuTemp').html(node.cpuTemp);
+            $('.roomTemp').html(node.temperature);
+            $('.humidity').html(node.humidity);
+            $('.infoUpdate').html(node.infoUpdate);
             $('.nodeUpdated').html(ago(node.updated, false).tag);
       
             //display alerts list
