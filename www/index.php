@@ -516,10 +516,10 @@
     
         $("#addAlert_OK").click("tap", function(event) {
             var alertType = $('#addAlertType').val();
-			LOG("adding alertID = " + alertID);
+	    LOG("adding alertID = " + alertType + " to node " + selectedNodeId);
             var count = 0;
-            if (nodes[selectedNodeID].alerts) {
-                count = alertIndex(nodes[selectedNodeID].alerts, alertType);
+            if (nodes[selectedNodeId].alerts.length > 0) {
+                count = alertIndex(nodes[selectedNodeId].alerts, alertType);
             }
             alertID = alertType + count;
             var newAlert = {
@@ -536,25 +536,26 @@
             // return the lowest available index fot specific alertType
             var count = 0;
             var indices = [];
-            var skipIndex = false;  
-            for (new alert in alerts) {
+            var skipIndex = 0;
+            LOG("# of alerts: " + alerts.length);
+            for (var alert in alerts) {
                 if (alerts[alert].alertType == alertType) {
-                    indices[count] = alert.substring(alertType.length, alert.length);
+                    indices[count] = parseInt(alert.substring(alertType.length, alert.length));
                     count++;
                 }
             }
             if (count == 0) {
                 return 0;
             } else {
-                for (var i = 0, i < count, count++) {
-                    skipIndex = false;
+/*                for (var i = 0, i < count, count++) {
+                    skipIndex = 0;
                     for (new index in indicies) {
                         if (indicies[index] == i)
-                            skipIndex = true;
+                            skipIndex = 1;
                     }
                     if (!skipIndex)
                         return i;
-                }
+                }*/
                 return count;
             }
         }
