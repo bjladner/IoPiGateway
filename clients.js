@@ -23,7 +23,7 @@ function clients() {
         triggers: {
             watering: {label: 'Watering'}
         },
-        // Controls for all Garage Door functions
+        // Controls for all Sprinkler functions
         controls: {
             refresh: {label: 'Refresh', action: 'STATUS', icon: 'refresh'},
             run: {label: 'Run', action: 'RUN', icon: 'arrow-u', css: 'background-color:#FF9B9B;'}
@@ -36,7 +36,7 @@ function clients() {
         triggers: {
             alarm: {label: 'Alarm'}
         },
-        // Controls for all Garage Door functions
+        // Controls for all Alarm functions
         controls: {
             refresh: {label: 'Refresh', action: 'STATUS', icon: 'refresh'},
             arm: {label: 'Arm', action: 'ARM', icon: 'arrow-u', css: 'background-color:#FF9B9B;'}

@@ -58,13 +58,15 @@
 // and copyright notices in any redistribution of this code
 // **********************************************************************************
 
-var io = require('socket.io').listen(8080);
+var io_old = require('socket.io').listen(8080);
+//var io = require('socket.io').listen(8080);
 var Datastore = require('nedb');
 var globalFunctions = require('./globals');
 var alerts = require('./alerts');
 var clients = require('./clients');
 var logger = require("./logger");
 var cfg = require('./config.default');
+var io = io_old.of('/iopi');
 
 var alertsDef = new alerts();
 var clientsDef = new clients();
@@ -79,11 +81,13 @@ db.persistence.setAutocompactionInterval(86400000); //daily
 // at, from anywhere! This was tested on Socket.IO v1.2.1 and will 
 // not work on older versions
 io.use(function(socket, next) {
-    var handshakeData = socket.request;
-    var remoteAddress = handshakeData.connection.remoteAddress;
-    var remotePort = handshakeData.connection.remotePort;
-    logger.info("AUTHORIZING CONNECTION FROM " + remoteAddress + ":" + remotePort);
-    if (remoteAddress == "localhost" || remoteAddress == "127.0.0.1") {
+    //var handshakeData = socket.request;
+    //var remoteAddress = handshakeData.connection.remoteAddress;
+    //var remotePort = handshakeData.connection.remotePort;
+    //logger.info("AUTHORIZING CONNECTION FROM " + remoteAddress + ":" + remotePort);
+    //logger.debug("Socket: " + JSON.readify(socket));
+    next();
+    /*if (remoteAddress == "localhost" || remoteAddress == "127.0.0.1") {
         logger.info('IDENTITY ACCEPTED: from local host');
         next();
     } else {
@@ -91,21 +95,22 @@ io.use(function(socket, next) {
         var compare_str = cfg.locnet.start.split(".",3);
         if (remote_add[0] == compare_str[0] && remote_add[1] == compare_str[1] && remote_add[2] == compare_str[2]) {
             logger.info('IDENTITY ACCEPTED: from local network');
+	    logger.debug('request data: ' + JSON.stringify(handshakeData));
             next();
         } else {
             logger.error('REJECTED IDENTITY, not coming from local network');
             next(new Error('REJECTED IDENTITY, not coming from local network'));
         }
-    }
+    }*/
 });
 
-io.sockets.on('connection', function (socket) {
+io.on('connection', function (socket) {
     logger.info("Socket connected!");
     socket.emit('ALERTSDEF', alertsDef.availableAlerts);
     socket.emit('CLIENTSDEF', clientsDef);
 
     db.find({ _id : { $exists: true } }, function (err, entries) {
-        io.sockets.emit('UPDATENODES', entries);
+        io.emit('UPDATENODES', entries);
     });
   
     socket.on('SEND_DATA', function (deviceData) {
@@ -146,7 +151,8 @@ io.sockets.on('connection', function (socket) {
                     });
 	        }
 
-            io.sockets.emit('UPDATENODE', existingNode);
+            io.emit('LOG', existingNode);
+            io.emit('UPDATENODE', existingNode);
             alertsDef.handleNodeAlerts(existingNode);
         });
     });
@@ -164,10 +170,9 @@ io.sockets.on('connection', function (socket) {
                 existingNode.photo = deviceData.photo||undefined;
 			
                 db.update({_id:deviceData.nodeID},{$set:existingNode},{}, function (err,numReplaced) {
-                    logger.info(' [' + deviceData.nodeID + '] CLIENT_INFO records replaced:' + numReplaced);
+                    //logger.info(' [' + deviceData.nodeID + '] CLIENT_INFO records replaced:' + numReplaced);
                 });
-                io.sockets.emit('UPDATENODE', existingNode);
-                logger.debug("CLIENT INFO found docs:" + entries.length);
+                io.emit('UPDATENODE', existingNode);
             }
         });
     });
@@ -187,7 +192,7 @@ io.sockets.on('connection', function (socket) {
                 db.update({ _id: dbNode._id }, { $set : dbNode}, {}, function (err, numReplaced) { 
                     logger.info('UPDATE_DB_ENTRY records replaced:' + numReplaced);
                 });
-                io.sockets.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
+                io.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
                 logger.debug("UPDATE DB ENTRY found docs:" + entries.length);
             }
         });
@@ -218,7 +223,7 @@ io.sockets.on('connection', function (socket) {
 		        } else {
 			        removeSchedule(dbNode._id, alertKey);
 		        }
-                io.sockets.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
+                io.emit('UPDATENODE', dbNode); //post it back to all clients to confirm UI changes
             }
         });
     });
@@ -226,7 +231,7 @@ io.sockets.on('connection', function (socket) {
     socket.on('NODEACTION', function (node) {
         if (node.nodeId && node.action) {
             logger.info('NODEACTION sent: ' + JSON.stringify(node));
-            io.sockets.emit('ACTION', node);
+            io.emit('ACTION', node);
         }
     });
 
@@ -234,7 +239,7 @@ io.sockets.on('connection', function (socket) {
         db.remove({ _id : nodeId }, function (err, removedCount) {
             logger.info('DELETED entries: ' + removedCount);
             db.find({ _id : { $exists: true } }, function (err, entries) {
-                io.sockets.emit('UPDATENODES', entries);
+                io.emit('UPDATENODES', entries);
             });
         });
 		removeSchedule(nodeId, null);
@@ -242,7 +247,7 @@ io.sockets.on('connection', function (socket) {
 	
     socket.on('SCHEDULE', function () {
         logger.info("Scheduled Alerts: " + scheduledAlerts);
-        //io.sockets.emit('LOG', scheduledAlerts);
+        //io.emit('LOG', scheduledAlerts);
     });
 });
 
