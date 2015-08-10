@@ -58,15 +58,14 @@
 // and copyright notices in any redistribution of this code
 // **********************************************************************************
 
-var io_old = require('socket.io').listen(8080);
 //var io = require('socket.io').listen(8080);
+var io = require('socket.io').listen(8888);
 var Datastore = require('nedb');
 var globalFunctions = require('./globals');
 var alerts = require('./alerts');
 var clients = require('./clients');
 var logger = require("./logger");
 var cfg = require('./config.default');
-var io = io_old.of('/iopi');
 
 var alertsDef = new alerts();
 var clientsDef = new clients();
@@ -81,13 +80,11 @@ db.persistence.setAutocompactionInterval(86400000); //daily
 // at, from anywhere! This was tested on Socket.IO v1.2.1 and will 
 // not work on older versions
 io.use(function(socket, next) {
-    //var handshakeData = socket.request;
-    //var remoteAddress = handshakeData.connection.remoteAddress;
-    //var remotePort = handshakeData.connection.remotePort;
-    //logger.info("AUTHORIZING CONNECTION FROM " + remoteAddress + ":" + remotePort);
-    //logger.debug("Socket: " + JSON.readify(socket));
-    next();
-    /*if (remoteAddress == "localhost" || remoteAddress == "127.0.0.1") {
+    var handshakeData = socket.request;
+    var remoteAddress = handshakeData.connection.remoteAddress;
+    var remotePort = handshakeData.connection.remotePort;
+    logger.info("AUTHORIZING CONNECTION FROM " + remoteAddress + ":" + remotePort);
+    if (remoteAddress == "localhost" || remoteAddress == "127.0.0.1") {
         logger.info('IDENTITY ACCEPTED: from local host');
         next();
     } else {
@@ -95,13 +92,12 @@ io.use(function(socket, next) {
         var compare_str = cfg.locnet.start.split(".",3);
         if (remote_add[0] == compare_str[0] && remote_add[1] == compare_str[1] && remote_add[2] == compare_str[2]) {
             logger.info('IDENTITY ACCEPTED: from local network');
-	    logger.debug('request data: ' + JSON.stringify(handshakeData));
             next();
         } else {
             logger.error('REJECTED IDENTITY, not coming from local network');
             next(new Error('REJECTED IDENTITY, not coming from local network'));
         }
-    }*/
+    }
 });
 
 io.on('connection', function (socket) {
@@ -114,13 +110,12 @@ io.on('connection', function (socket) {
     });
   
     socket.on('SEND_DATA', function (deviceData) {
-        var id = deviceData.deviceID;
-        logger.info("Updating node: " + deviceData.name);
-        db.find({ _id : id }, function (err, entries) {
+        logger.info("Updating node infor for node: " + deviceData.name);
+        db.find({ _id : deviceData.deviceID }, function (err, entries) {
             var existingNode = new Object();
             if (entries.length == 1)
                 existingNode = entries[0];
-            existingNode._id = id;
+            existingNode._id = deviceData.deviceID;
             //existingNode.rssi = deviceData.signalStrength; //update signal strength we last heard from this node, regardless of any matches
             existingNode.type = deviceData.type;
             existingNode.label = deviceData.name;
@@ -128,28 +123,28 @@ io.on('connection', function (socket) {
             existingNode.lastStateChange = deviceData.lastStateChange;
             existingNode.updated = new Date().getTime(); //update timestamp we last heard from this node, regardless of any matches
 			
-	        // set up existing alert schedules
-	        if (existingNode.alerts) {
-	            for (var alertKey in existingNode.alerts) {
-		            if (existingNode.alerts[alertKey].alertStatus) {
-		                if (existingNode.Status == existingNode.alerts[alertKey].clientStatus) {
-			                addSchedule(existingNode, alertKey);
-		                } else {
-			                removeSchedule(existingNode._id, alertKey);
-		                }
-		            }
+	    // set up existing alert schedules
+	    if (existingNode.alerts) {
+	        for (var alertKey in existingNode.alerts) {
+		    if (existingNode.alerts[alertKey].alertStatus) {
+		        if (existingNode.Status == existingNode.alerts[alertKey].clientStatus) {
+		            addSchedule(existingNode, alertKey);
+		        } else {
+			    removeSchedule(existingNode._id, alertKey);
 		        }
-	        }
+		    }
+		}
+	    }
 			
-	        // add entry into database
-	        if (entries.length == 0) {
-                    db.insert(existingNode);
-                    logger.info(' [' + id + '] DB-Insert new _id:' + id);
-                } else {
-                    db.update({_id:id},{$set:existingNode},{}, function (err,numReplaced) {
-                        logger.info(' [' + id + '] DB-Updates:' + numReplaced);
-                    });
-	        }
+	    // add entry into database
+            if (entries.length == 0) {
+                db.insert(existingNode);
+                logger.info(' [' + existingNode._id + '] DB-Insert new _id:' + id);
+            } else {
+                db.update({_id:existingNode._id},{$set:existingNode},{}, function (err,numReplaced) {
+                    logger.info(' [' + existingNode._id + '] DB-Updates:' + numReplaced);
+                });
+            }
 
             io.emit('LOG', existingNode);
             io.emit('UPDATENODE', existingNode);
@@ -158,6 +153,7 @@ io.on('connection', function (socket) {
     });
   
     socket.on('CLIENT_INFO', function (deviceData) {
+        logger.info("Updating client info for node: " + deviceData.name);
         db.find({ _id : deviceData.nodeID }, function (err, entries) {
             if (entries.length == 1) {
                 var existingNode = entries[0];
