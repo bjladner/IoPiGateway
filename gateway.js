@@ -110,7 +110,7 @@ io.on('connection', function (socket) {
     });
   
     socket.on('SEND_DATA', function (deviceData) {
-        logger.info("Updating node infor for node: " + deviceData.name);
+        logger.info("Updating node info for node: " + deviceData.name);
         db.find({ _id : deviceData.deviceID }, function (err, entries) {
             var existingNode = new Object();
             if (entries.length == 1)
@@ -153,7 +153,7 @@ io.on('connection', function (socket) {
     });
   
     socket.on('CLIENT_INFO', function (deviceData) {
-        logger.info("Updating client info for node: " + deviceData.name);
+        logger.info("Updating client info for node: " + deviceData.nodeID);
         db.find({ _id : deviceData.nodeID }, function (err, entries) {
             if (entries.length == 1) {
                 var existingNode = entries[0];
